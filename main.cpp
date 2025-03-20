@@ -1,4 +1,4 @@
-#include "undirectdraph.h"
+#include "undirectgraph.h"
 
 int main(int, char**){
     setlocale(LC_ALL, "ru");
