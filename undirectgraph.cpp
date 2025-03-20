@@ -1,4 +1,4 @@
-#include "UnDirectGraph.h"
+#include "undirectdraph.h"
 
 UnDirectGraph::UnDirectGraph(std::string filepath) {
     std::ifstream in(filepath);
