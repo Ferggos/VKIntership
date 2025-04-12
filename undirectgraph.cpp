@@ -4,23 +4,19 @@ UnDirectGraph::UnDirectGraph(std::string filepath) {
     std::ifstream in(filepath);
 
     if (!in) {
-        std::cerr << "Error reading file: check the path or file name" << std::endl;
-        return;
+        throw std::ios_base::failure("Failed to open file: " + filepath);
     }
 
     if (in.peek() == std::ifstream::traits_type::eof()) {
-        std::cerr << "Error: File is empty" << std::endl;
-        return;
+        throw std::ios_base::failure("Error: File is empty");
     }
 
     if (!(in >> V) || V <= 0) {
-        std::cerr << "Error: Incorrect number of vertices" << std::endl;
-        return;
+        throw std::invalid_argument("Error: Invalid number of vertices: must be > 0");
     }
 
-    if (!(in >> E) || E < 0 || E >(V * (V - 1)) / 2) {
-        std::cerr << "Error: Incorrect number of edges" << std::endl;
-        return;
+    if (!(in >> E) || E < 0 || E > (V * (V - 1)) / 2) {
+        throw std::invalid_argument("Error: Invalid number of edges: must be between 0 and V*(V-1)/2");
     }
 
     edges.resize(V);
@@ -29,45 +25,45 @@ UnDirectGraph::UnDirectGraph(std::string filepath) {
     std::set<std::pair<int, int>> uniqueEdges;
 
     int u, v;
-    while (edgeBuffer.size() < static_cast<size_t>(E) && (in >> u >> v)) {
+    while (edgeBuffer.size() < E && (in >> u >> v)) {
         if (u < 0 || u >= V || v < 0 || v >= V) {
-            std::cerr << "Error: Invalid edge (" << u << ", " << v << ")" << std::endl;
-            return;
+            throw std::out_of_range("Error: Invalid edge (" + std::to_string(u) + ", " + std::to_string(v) + ")");
         }
 
         if (u > v) std::swap(u, v);
         if (uniqueEdges.find({ u, v }) == uniqueEdges.end()) {
             edgeBuffer.emplace_back(u, v);
             uniqueEdges.insert({ u, v });
-        }
-        else {
+        } else {
             std::cerr << "Warning: Edge (" << u << ", " << v << ") has already been added" << std::endl;
         }
     }
 
-    if (edgeBuffer.size() < static_cast<size_t>(E)) {
-        std::cerr << "Error: File specifies " << E << " edges, but only " << edgeBuffer.size() << " were found" << std::endl;
-        return;
+    if (edgeBuffer.size() < E) {
+        throw std::length_error(
+            "Error: File specifies " + std::to_string(E) + 
+            " edges, but only " + std::to_string(edgeBuffer.size()) + " were found"
+        );
     }
 
     for (const auto& edge : edgeBuffer) {
         addEdge(edge.first, edge.second);
     }
 
-    int beginVertex;
-    if (!(in >> beginVertex) || beginVertex < 0 || beginVertex >= V) {
-        std::cerr << "Error: Invalid starting vertex: " << beginVertex << std::endl;
-        return;
+    if (!(in >> beginVertex)) {
+        throw std::invalid_argument("Error: Could not read starting vertex");
+    }
+    if (beginVertex < 0 || beginVertex >= V) {
+        throw std::out_of_range("Error: Invalid starting vertex: " + std::to_string(beginVertex));
     }
 
     std::string temp_extra;
     if (in >> temp_extra) {
-        std::cerr << "Error: File contains more data than expected (extra edges, numbers, or characters)" << std::endl;
-        return;
+        throw std::logic_error("Error: File contains more data than expected (extra edges, numbers, or characters)");
     }
 
-    findShortestPaths(beginVertex);
 }
+
 
 void UnDirectGraph::addEdge(int u, int v) {
 
@@ -81,7 +77,7 @@ void UnDirectGraph::addEdge(int u, int v) {
 }
 
 
-void UnDirectGraph::findShortestPaths(int beginVertex){
+void UnDirectGraph::findShortestPaths(){
     std::vector<int> dist(V, INF);
 
     std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, std::greater<std::pair<int, int>>> pq;
@@ -94,9 +90,7 @@ void UnDirectGraph::findShortestPaths(int beginVertex){
         int u = pq.top().second;
         pq.pop();
 
-        std::list<std::pair<int, int>>::iterator it;
-
-        for (it = edges[u].begin(); it != edges[u].end(); ++it){
+        for (auto it = edges[u].begin(); it != edges[u].end(); ++it){
             int v = (*it).first;
             int weight = (*it).second;
             if (dist[v] > dist[u] + weight) {
